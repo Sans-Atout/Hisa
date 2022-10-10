@@ -1,0 +1,4 @@
+[log]
+prod_env=#int
+path=#Folder path that must exist
+extension=log
