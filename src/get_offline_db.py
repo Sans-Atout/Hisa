@@ -8,9 +8,12 @@ from src.scrapper import getSniffer
 # global import 
 from os import listdir
 from json import load
+from requests import get
+from tarfile import open as open_tar
 
 # Librairie global variable
 _GITHUB_URL = "https://github.com/manami-project/anime-offline-database/tags"
+_DOWNLOAD_URL = "https://github.com/manami-project/anime-offline-database/archive/refs/tags/%(tag_)s.tar.gz"
 
 # Log variable initialisation
 config = ConfigParser()
@@ -62,3 +65,19 @@ def get_anime_offline():
     # database from the open source project
     last_tags_div = github_page.find("div", class_="commit js-details-container Details")
     _last_realese_links = last_tags_div.find("a",class_="Link--primary",href=True)
+    _tags = _last_realese_links.text
+    
+    for _file in all_aodb:
+        if _tags in _file and ".json" in _file:
+            log.info("We allready have the last version")
+            return load(open("./input/%(tags)s.json" % {"tags" : _tags}, "r" ))
+    
+    log.info("Downloading file")
+    response = get(_DOWNLOAD_URL % {"tag_" : _tags})
+    tar_file = open("./input/tmp.tar.gz", "wb")
+    tar_file.write(response.content)
+    log.done("Writing file completed")
+    log.info("Extracting tar.gz file")
+    extractor = open_tar("./input/tmp.tar.gz")
+    extractor.extract("anime-offline-database-%(version)s/anime-offline-database-minified.json" % {"version" : _tags},"./input/")
+    log.done("Data sucessfully extracted")
