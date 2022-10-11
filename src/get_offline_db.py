@@ -6,7 +6,8 @@ from python_tracer.Logger import VerboseLevel,Logger
 from src.scrapper import getSniffer
 
 # global import 
-from os import listdir
+from os import listdir, remove, rename
+from shutil import rmtree
 from json import load
 from requests import get
 from tarfile import open as open_tar
@@ -37,7 +38,7 @@ def get_anime_offline():
 
     # D
     for _file in all_aodb:
-        if ".json" in _file[len(_file)-4:]:
+        if ".json" in _file:
             all_json_file.append(_file)
 
     if len(all_json_file) == 0:
@@ -72,12 +73,21 @@ def get_anime_offline():
             log.info("We allready have the last version")
             return load(open("./input/%(tags)s.json" % {"tags" : _tags}, "r" ))
     
-    log.info("Downloading file")
+    ## We need to download the file and 
+    log.info("[1/6] Downloading last release")
     response = get(_DOWNLOAD_URL % {"tag_" : _tags})
     tar_file = open("./input/tmp.tar.gz", "wb")
     tar_file.write(response.content)
-    log.done("Writing file completed")
-    log.info("Extracting tar.gz file")
+    log.info("[2/6] Extract data")
     extractor = open_tar("./input/tmp.tar.gz")
     extractor.extract("anime-offline-database-%(version)s/anime-offline-database-minified.json" % {"version" : _tags},"./input/")
-    log.done("Data sucessfully extracted")
+    log.info("[3/6] Remove original file")
+    remove("./input/tmp.tar.gz")
+    log.info("[4/6] Rename mimified JSON file")
+    _input_aodbm = "./input/anime-offline-database-%(version)s/anime-offline-database-minified.json" % {"version" : _tags}
+    _output_aodbm = "./input/%(version)s.json" % {"version" : _tags}
+    rename(_input_aodbm, _output_aodbm)
+    log.info("[5/6] Remove unwanted folder")
+    rmtree( "./input/anime-offline-database-%(version)s/" % {"version" : _tags})
+    log.done("[6/6] Operation completed")
+    return load(open("./input/%(tags)s.json" % {"tags" : _tags}, "r" ))
